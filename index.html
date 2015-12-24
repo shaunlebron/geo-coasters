@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.graticule {
+  fill: none;
+  stroke: #777;
+  stroke-width: .5px;
+  stroke-opacity: .5;
+}
+
+.land {
+  fill: #222;
+  stroke: #222;
+  stroke-width: .5px;
+}
+
+.boundary {
+  fill: none;
+  stroke: none;
+  stroke-width: .5px;
+}
+
+</style>
+<body>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+
+var width = 800,
+    height = 800;
+
+var locations = {
+  // 0: latitude (-W, +E)
+  // 1: longitude (-S, +N)
+  "northpole": [0, 90],
+  "houston": [-95.3698, 29.7604],
+  "longbeach": [-118.1956, 33.7683],
+  "pasadena": [-95.1739, 29.6761],
+  "manilla": [121, 14.58]
+};
+
+function reflect(location) {
+  return [-location[0], -location[1]];
+}
+
+function opposite(location) {
+  return [location[0]+180, -location[1]];
+}
+
+function add(location, isOpposite) {
+
+  var projection = d3.geo
+    //.stereographic()
+    //.azimuthalEqualArea()
+    .azimuthalEquidistant()
+    //.gnomonic()
+    //.orthographic()
+    .scale(245)
+    .translate([width / 2, height / 2])
+    .clipAngle(90 - 1e-4)
+    .clipExtent([[0, 0], [width, height]])
+    .precision(.1);
+
+  var rotation = reflect(location);
+  if (isOpposite) {
+    rotation = opposite(rotation);
+  }
+
+  projection.rotate(rotation);
+
+  var path = d3.geo.path()
+    .projection(projection);
+
+  var graticule = d3.geo.graticule();
+
+  var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  /*
+     svg.append("path")
+     .datum(graticule)
+     .attr("class", "graticule")
+     .attr("d", path);
+   */
+
+  d3.json("world-110m.json", function(error, world) {
+    if (error) throw error;
+
+    svg.insert("path", ".graticule")
+      .datum(topojson.feature(world, world.objects.land))
+      .attr("class", "land")
+      .attr("d", path);
+
+    svg.insert("path", ".graticule")
+      .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+      .attr("class", "boundary")
+      .attr("d", path);
+  });
+}
+
+add(locations.houston);
+add(locations.houston, true);
+add(locations.longbeach);
+add(locations.longbeach, true);
+add(locations.pasadena);
+add(locations.pasadena, true);
+add(locations.manilla);
+add(locations.manilla, true);
+
+//d3.select(self.frameElement).style("height", height + "px");
+
+</script>
